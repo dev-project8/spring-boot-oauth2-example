@@ -1,4 +1,4 @@
-package kr.project8.oauth2sample;
+package kr.project8.oauth2sample.config;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Before;
@@ -27,7 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestPropertySource(properties = {"spring.security.user.name=test", "spring.security.user.password=password"})
-public class SpringSecurityTest {
+public class SecurityConfigTest {
     @Autowired
     private WebApplicationContext context;
 
