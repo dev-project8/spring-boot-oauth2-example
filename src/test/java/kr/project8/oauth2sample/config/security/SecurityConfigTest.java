@@ -1,4 +1,4 @@
-package kr.project8.oauth2sample.config;
+package kr.project8.oauth2sample.config.security;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Before;

@@ -1,4 +1,4 @@
-package kr.project8.oauth2sample.config;
+package kr.project8.oauth2sample.config.oauth;
 
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
@@ -17,37 +17,43 @@ import org.springframework.web.util.UriComponentsBuilder;
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Slf4j
-public class AuthorizationServerConfigTest {
+public class ImplicitGrantTypeOauthTest {
 
     @Autowired
     private TestRestTemplate template;
 
     @Test
-    // Authorization Code Grant Type / AccessToken 발급 테스트
-    public void test() {
-        String sessionId = requestAuthorizationTokenSessionId();
-        String code = requestAuthorizationCode(sessionId);
+    public void AccessToken_발급_테스트() {
+        String clientId = "client";
+        String redirectUri = "http://localhost:9000/callback";
+        String responseType = "token";
+        String scope = "read_profile";
 
+        String sessionId = resourceOwnerLogin(clientId, redirectUri, responseType, scope);
+        String accessToken = requestAccessTokenBySessionId(sessionId);
+
+        log.info("AccessToken => {}", accessToken);
     }
 
-    // 권한 부여 코드 요청 session획득
+    // ResourceOwnerLogin
     // 이 호출로 스프링은 세션에 client_id, redirect_uri, response_type, scope을 저장해 놓습니다.
-    public String requestAuthorizationTokenSessionId() {
-        String url = "/oauth/authorize?client_id=client&redirect_uri=http://localhost:9000/callback&response_type=code&scope=read_profile";
+    /**
+     * {@link org.springframework.security.oauth2.provider.endpoint.AbstractEndpoint } 참고
+     */
+    private String resourceOwnerLogin(String clientId, String redirectUri, String responseType, String scope) {
+        String url = "/oauth/authorize?client_id=" + clientId +
+                "&redirect_uri=" + redirectUri +
+                "&response_type=" +responseType +
+                "&scope=" + scope;
         ResponseEntity<String> response = template
                 .withBasicAuth("user1", "pass1")
                 .getForEntity(url, String.class);
 
-        for (String key : response.getHeaders().keySet()) {
-            log.info("{} ===> {}", key, response.getHeaders().get(key));
-        }
-
-        return response.getHeaders().get("Set-Cookie").get(0);
-
+        return response.getHeaders().get("Set-Cookie").get(0);  // SessionId
     }
 
-    // 권한 코드를 가져온다.
-    public String requestAuthorizationCode(String sessionId) {
+    // 직접 AccessToken를 가져온다.
+    private String requestAccessTokenBySessionId(String sessionId) {
         String url = "/oauth/authorize";
 
         MultiValueMap<String, String> parameters = new LinkedMultiValueMap<>();
@@ -64,13 +70,11 @@ public class AuthorizationServerConfigTest {
         ResponseEntity<String> response = template
                 .withBasicAuth("user1", "pass1")
                 .postForEntity(url, entity, String.class);
+        System.out.println(response);
 
         // response status code 302(redirect)
-        for (String key : response.getHeaders().keySet()) {
-            log.info("{} ===> {}", key, response.getHeaders().get(key));
-        }
         String redirectUrl = response.getHeaders().get("Location").get(0);
-        return UriComponentsBuilder.fromUriString(redirectUrl).build().getQueryParams().get("code").get(0);
+        return UriComponentsBuilder.fromUriString(redirectUrl).build().getFragment();//.getQueryParams().get("access_token").get(0);
 
     }
 }
