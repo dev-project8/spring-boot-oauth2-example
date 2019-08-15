@@ -1,80 +1,65 @@
 package kr.project8.oauth2sample.config.oauth;
 
+import kr.project8.oauth2sample.config.oauth.accessToken.ImplicitTypeTokenService;
+import kr.project8.oauth2sample.config.oauth.accessToken.Token;
+import kr.project8.oauth2sample.config.oauth.accessToken.TokenRequest;
+import kr.project8.oauth2sample.config.oauth.accessToken.TokenService;
 import lombok.extern.slf4j.Slf4j;
+import org.assertj.core.api.Assertions;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.util.UriComponentsBuilder;
 
+import java.util.Arrays;
+import java.util.List;
+
+
+/**
+ * Implicit Grant Type 방식 테스트
+ */
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Slf4j
 public class ImplicitGrantTypeOauthTest {
 
+    public static final String REDIRECT_URI = "http://localhost:9000/callback";
+    public static final List<String> SCOPES = Arrays.asList("read_profile") ;
+
+    public static final String CLIENT_ID = "client";
+    public static final String SECRET = "password";
+    public static final String USERNAME = "user1";
+    public static final String PASSWORD = "pass1";
+
     @Autowired
     private TestRestTemplate template;
 
+    private TokenRequest tokenRequest;
+    private TokenService tokenService;
+
+    @Before
+    public void setup() {
+        this.tokenService = new ImplicitTypeTokenService(template);
+        this.tokenRequest = TokenRequest.builder()
+                .client(CLIENT_ID)
+                .secret(SECRET)
+                .username(USERNAME)
+                .password(PASSWORD)
+                .redirectUrl(REDIRECT_URI)
+                .scopes(SCOPES)
+                .build();
+    }
+
     @Test
     public void AccessToken_발급_테스트() {
-        String clientId = "client";
-        String redirectUri = "http://localhost:9000/callback";
-        String responseType = "token";
-        String scope = "read_profile";
+        Token token = tokenService.getToken(tokenRequest);
 
-        String sessionId = resourceOwnerLogin(clientId, redirectUri, responseType, scope);
-        String accessToken = requestAccessTokenBySessionId(sessionId);
+        log.info("Token => {}", token.toString());
 
-        log.info("AccessToken => {}", accessToken);
+        Assertions.assertThat(token.getAccessToken()).isNotNull();
     }
 
-    // ResourceOwnerLogin
-    // 이 호출로 스프링은 세션에 client_id, redirect_uri, response_type, scope을 저장해 놓습니다.
-    /**
-     * {@link org.springframework.security.oauth2.provider.endpoint.AbstractEndpoint } 참고
-     */
-    private String resourceOwnerLogin(String clientId, String redirectUri, String responseType, String scope) {
-        String url = "/oauth/authorize?client_id=" + clientId +
-                "&redirect_uri=" + redirectUri +
-                "&response_type=" +responseType +
-                "&scope=" + scope;
-        ResponseEntity<String> response = template
-                .withBasicAuth("user1", "pass1")
-                .getForEntity(url, String.class);
-
-        return response.getHeaders().get("Set-Cookie").get(0);  // SessionId
-    }
-
-    // 직접 AccessToken를 가져온다.
-    private String requestAccessTokenBySessionId(String sessionId) {
-        String url = "/oauth/authorize";
-
-        MultiValueMap<String, String> parameters = new LinkedMultiValueMap<>();
-        parameters.set("scope.read_profile", "true");
-        parameters.set("user_oauth_approval", "true");
-        parameters.set("authorize", "Authorize");
-
-        final HttpHeaders headers = new HttpHeaders();
-        headers.set("Cookie", sessionId);
-
-        //Create a new HttpEntity
-        final HttpEntity entity = new HttpEntity<>(parameters, headers);
-
-        ResponseEntity<String> response = template
-                .withBasicAuth("user1", "pass1")
-                .postForEntity(url, entity, String.class);
-        System.out.println(response);
-
-        // response status code 302(redirect)
-        String redirectUrl = response.getHeaders().get("Location").get(0);
-        return UriComponentsBuilder.fromUriString(redirectUrl).build().getFragment();//.getQueryParams().get("access_token").get(0);
-
-    }
 }

@@ -1,6 +1,10 @@
 package kr.project8.oauth2sample.config.oauth;
 
-import kr.project8.oauth2sample.config.oauth.accessToken.*;
+
+import kr.project8.oauth2sample.config.oauth.accessToken.PasswordTypeTokenService;
+import kr.project8.oauth2sample.config.oauth.accessToken.Token;
+import kr.project8.oauth2sample.config.oauth.accessToken.TokenRequest;
+import kr.project8.oauth2sample.config.oauth.accessToken.TokenService;
 import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.Assertions;
 import org.junit.Before;
@@ -15,14 +19,22 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Authorization Code Grant Type 방식 테스트
+ * Implicit Grant Type 방식 테스트
+ *
+ * curl -X POST \
+ *   http://localhost:8080/oauth/token \
+ *   -H 'Authorization: Basic Y2xpZW50OnBhc3N3b3Jk' \
+ *   -H 'Content-Type: application/x-www-form-urlencoded' \
+ *   -d 'username=user&password=pass&grant_type=password&scope=read_profile'
+ */
+/**
+ * {@link org.springframework.security.oauth2.provider.endpoint.TokenEndpoint } 참고
  */
 @Slf4j
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-public class CodeGrantTypeOauthTest {
+public class PasswordGrantTypeOauthTest {
 
-    public static final String REDIRECT_URI = "http://localhost:9000/callback";
     public static final List<String> SCOPES = Arrays.asList("read_profile") ;
 
     public static final String CLIENT_ID = "client";
@@ -38,13 +50,12 @@ public class CodeGrantTypeOauthTest {
 
     @Before
     public void setup() {
-        this.tokenService = new CodeGrantTypeTokenService(template);
+        this.tokenService = new PasswordTypeTokenService(template);
         this.tokenRequest = TokenRequest.builder()
                 .client(CLIENT_ID)
                 .secret(SECRET)
                 .username(USERNAME)
                 .password(PASSWORD)
-                .redirectUrl(REDIRECT_URI)
                 .scopes(SCOPES)
                 .build();
     }
@@ -57,5 +68,4 @@ public class CodeGrantTypeOauthTest {
 
         Assertions.assertThat(token.getAccessToken()).isNotNull();
     }
-
 }
